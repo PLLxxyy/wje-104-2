@@ -40,6 +40,7 @@ const withExtraLayer = (layers: Layer[], strokes: Stroke[]): Layer[] => [
     id: uuidv4(),
     name: "点缀层",
     visible: true,
+    locked: false,
     opacity: 0.82,
     strokes
   }

@@ -69,6 +69,14 @@
   box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
+.lockedLayer {
+  opacity: 0.72;
+}
+
+.lockedLayer .layerTitle {
+  cursor: not-allowed;
+}
+
 .layerTitle {
   width: 100%;
   display: flex;

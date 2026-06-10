@@ -108,6 +108,7 @@ const createLayer = (name: string, strokes: Stroke[], opacity = 1): Layer => ({
   id: uuidv4(),
   name,
   visible: true,
+  locked: false,
   opacity,
   strokes
 });

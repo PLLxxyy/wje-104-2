@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, EyeOff, Lock, Merge, Plus, Trash2, Unlock } from "lucide-react";
 import { Layer } from "../../../types/layer";
 import styles from "./styles.module.css";
 
@@ -7,9 +7,11 @@ interface LayerPanelProps {
   activeLayerId: string;
   onSelect: (layerId: string) => void;
   onToggleVisibility: (layerId: string) => void;
+  onToggleLock: (layerId: string) => void;
   onAdd: () => void;
   onDelete: (layerId: string) => void;
   onReorder: (layerId: string, direction: "up" | "down") => void;
+  onMergeDown: (layerId: string) => void;
   onOpacityChange: (layerId: string, opacity: number) => void;
 }
 
@@ -18,9 +20,11 @@ export const LayerPanel = ({
   activeLayerId,
   onSelect,
   onToggleVisibility,
+  onToggleLock,
   onAdd,
   onDelete,
   onReorder,
+  onMergeDown,
   onOpacityChange
 }: LayerPanelProps): JSX.Element => (
   <aside className={styles.panel} aria-label="图层面板">
@@ -38,9 +42,19 @@ export const LayerPanel = ({
       {[...layers].reverse().map((layer, reverseIndex) => {
         const layerIndex = layers.length - 1 - reverseIndex;
         const isActive = layer.id === activeLayerId;
+        const canMergeDown = layerIndex > 0 && !layers[layerIndex - 1].locked;
         return (
-          <article key={layer.id} className={isActive ? styles.activeLayer : styles.layer}>
-            <button className={styles.layerTitle} type="button" onClick={() => onSelect(layer.id)}>
+          <article
+            key={layer.id}
+            className={`${isActive ? styles.activeLayer : styles.layer} ${
+              layer.locked ? styles.lockedLayer : ""
+            }`}
+          >
+            <button
+              className={styles.layerTitle}
+              type="button"
+              onClick={() => onSelect(layer.id)}
+            >
               <span>{layer.name}</span>
               <small>{layer.strokes.length} 笔</small>
             </button>
@@ -52,6 +66,14 @@ export const LayerPanel = ({
                 aria-label={layer.visible ? "隐藏图层" : "显示图层"}
               >
                 {layer.visible ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleLock(layer.id)}
+                title={layer.locked ? "解锁图层" : "锁定图层"}
+                aria-label={layer.locked ? "解锁图层" : "锁定图层"}
+              >
+                {layer.locked ? <Lock size={16} aria-hidden="true" /> : <Unlock size={16} aria-hidden="true" />}
               </button>
               <button
                 type="button"
@@ -72,6 +94,15 @@ export const LayerPanel = ({
                 <ArrowDown size={16} aria-hidden="true" />
               </button>
               <button
+                type="button"
+                onClick={() => onMergeDown(layer.id)}
+                disabled={!canMergeDown}
+                title="合并到下方图层"
+                aria-label="合并到下方图层"
+              >
+                <Merge size={16} aria-hidden="true" />
+              </button>
+              <button
                 className={styles.deleteButton}
                 type="button"
                 onClick={() => onDelete(layer.id)}
@@ -90,6 +121,7 @@ export const LayerPanel = ({
                 step="0.01"
                 value={layer.opacity}
                 onChange={(event) => onOpacityChange(layer.id, Number(event.target.value))}
+                disabled={layer.locked}
               />
             </label>
           </article>
@@ -98,4 +130,3 @@ export const LayerPanel = ({
     </div>
   </aside>
 );
-

@@ -120,6 +120,10 @@ export const useCanvas = ({
       if (!canvas) {
         return;
       }
+      const activeLayer = layers.find((layer) => layer.id === activeLayerId);
+      if (activeLayer?.locked) {
+        return;
+      }
       const point = getCanvasPoint(event, canvas, width, height);
       if (!isInsideCup(point)) {
         return;
@@ -146,7 +150,7 @@ export const useCanvas = ({
       draftStrokeRef.current = stroke;
       setDraftStroke(stroke);
     },
-    [brushSize, color, completeStroke, height, onPointerPosition, opacity, toolType, width]
+    [activeLayerId, brushSize, color, completeStroke, height, layers, onPointerPosition, opacity, toolType, width]
   );
 
   const handlePointerMove = useCallback(

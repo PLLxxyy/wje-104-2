@@ -20,9 +20,11 @@ interface EditorWorkAreaProps {
   onCanvasError: (message: string) => void;
   onSelectLayer: (layerId: string) => void;
   onToggleLayerVisibility: (layerId: string) => void;
+  onToggleLayerLock: (layerId: string) => void;
   onAddLayer: () => void;
   onDeleteLayer: (layerId: string) => void;
   onReorderLayer: (layerId: string, direction: "up" | "down") => void;
+  onMergeLayerDown: (layerId: string) => void;
   onLayerOpacityChange: (layerId: string, opacity: number) => void;
 }
 
@@ -38,9 +40,11 @@ export const EditorWorkArea = ({
   onCanvasError,
   onSelectLayer,
   onToggleLayerVisibility,
+  onToggleLayerLock,
   onAddLayer,
   onDeleteLayer,
   onReorderLayer,
+  onMergeLayerDown,
   onLayerOpacityChange
 }: EditorWorkAreaProps): JSX.Element => (
   <section className={styles.editorGrid}>
@@ -69,11 +73,12 @@ export const EditorWorkArea = ({
       activeLayerId={activeLayerId}
       onSelect={onSelectLayer}
       onToggleVisibility={onToggleLayerVisibility}
+      onToggleLock={onToggleLayerLock}
       onAdd={onAddLayer}
       onDelete={onDeleteLayer}
       onReorder={onReorderLayer}
+      onMergeDown={onMergeLayerDown}
       onOpacityChange={onLayerOpacityChange}
     />
   </section>
 );
-

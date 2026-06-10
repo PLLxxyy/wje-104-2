@@ -25,7 +25,7 @@ import { downloadBlob, ExportScale } from "../../utils/export";
 import { createArtworkThumbnail } from "../../utils/thumbnail";
 import styles from "./styles.module.css";
 
-type DialogKind = "layer" | "preset" | undefined;
+type DialogKind = "layer" | "preset" | "merge" | undefined;
 
 const toDownloadName = (name: string): string =>
   `${name.trim().replace(/\s+/g, "-") || "latte-art"}-${dayjs().format("YYYYMMDD-HHmm")}.png`;
@@ -41,6 +41,8 @@ export const Editor = (): JSX.Element => {
   const [presetOpen, setPresetOpen] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<PresetTemplate | undefined>();
   const [pendingLayerId, setPendingLayerId] = useState<string | undefined>();
+  const [pendingMergeSourceId, setPendingMergeSourceId] = useState<string | undefined>();
+  const [pendingMergeTargetId, setPendingMergeTargetId] = useState<string | undefined>();
   const [dialogKind, setDialogKind] = useState<DialogKind>();
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -54,8 +56,10 @@ export const Editor = (): JSX.Element => {
   const addLayer = useLayerStore((state) => state.addLayer);
   const deleteLayer = useLayerStore((state) => state.deleteLayer);
   const toggleLayerVisibility = useLayerStore((state) => state.toggleLayerVisibility);
+  const toggleLayerLock = useLayerStore((state) => state.toggleLayerLock);
   const setLayerOpacity = useLayerStore((state) => state.setLayerOpacity);
   const moveLayer = useLayerStore((state) => state.moveLayer);
+  const mergeLayers = useLayerStore((state) => state.mergeLayers);
   const saveArtwork = useArtworkStore((state) => state.saveArtwork);
   const getArtworkById = useArtworkStore((state) => state.getArtworkById);
   const {
@@ -113,6 +117,11 @@ export const Editor = (): JSX.Element => {
   const handleStrokeComplete = useCallback(
     (stroke: Stroke): void => {
       const currentState = useLayerStore.getState();
+      const activeLayer = currentState.layers.find((layer) => layer.id === currentState.activeLayerId);
+      if (activeLayer?.locked) {
+        showNotice(UI_TEXT.layerLockedBlocked);
+        return;
+      }
       const nextLayers = currentState.layers.map((layer) =>
         layer.id === currentState.activeLayerId
           ? { ...layer, strokes: [...layer.strokes, stroke] }
@@ -120,7 +129,7 @@ export const Editor = (): JSX.Element => {
       );
       syncLayers(nextLayers, true);
     },
-    [syncLayers]
+    [showNotice, syncLayers]
   );
 
   const commitStoreAction = (action: () => boolean | void): void => {
@@ -140,6 +149,22 @@ export const Editor = (): JSX.Element => {
     setDialogKind("layer");
   };
 
+  const handleMergeLayerDownRequest = (sourceLayerId: string): void => {
+    const sourceIndex = layers.findIndex((layer) => layer.id === sourceLayerId);
+    if (sourceIndex <= 0) {
+      showNotice(UI_TEXT.mergeBlockedNoTarget);
+      return;
+    }
+    const targetLayer = layers[sourceIndex - 1];
+    if (targetLayer.locked) {
+      showNotice(UI_TEXT.mergeBlockedTargetLocked);
+      return;
+    }
+    setPendingMergeSourceId(sourceLayerId);
+    setPendingMergeTargetId(targetLayer.id);
+    setDialogKind("merge");
+  };
+
   const confirmDialog = (): void => {
     if (dialogKind === "layer" && pendingLayerId) {
       commitStoreAction(() => deleteLayer(pendingLayerId));
@@ -153,11 +178,20 @@ export const Editor = (): JSX.Element => {
       setDialogKind(undefined);
       showNotice(UI_TEXT.loadTemplateSuccess);
     }
+    if (dialogKind === "merge" && pendingMergeSourceId && pendingMergeTargetId) {
+      commitStoreAction(() => mergeLayers(pendingMergeSourceId, pendingMergeTargetId));
+      setPendingMergeSourceId(undefined);
+      setPendingMergeTargetId(undefined);
+      setDialogKind(undefined);
+      showNotice(UI_TEXT.mergeSuccess);
+    }
   };
 
   const cancelDialog = (): void => {
     setPendingLayerId(undefined);
     setPendingTemplate(undefined);
+    setPendingMergeSourceId(undefined);
+    setPendingMergeTargetId(undefined);
     setDialogKind(undefined);
   };
 
@@ -255,9 +289,11 @@ export const Editor = (): JSX.Element => {
         onCanvasError={showNotice}
         onSelectLayer={selectLayer}
         onToggleLayerVisibility={(layerId) => commitStoreAction(() => toggleLayerVisibility(layerId))}
+        onToggleLayerLock={(layerId) => commitStoreAction(() => toggleLayerLock(layerId))}
         onAddLayer={() => commitStoreAction(() => addLayer())}
         onDeleteLayer={handleDeleteLayerRequest}
         onReorderLayer={(layerId, direction) => commitStoreAction(() => moveLayer(layerId, direction))}
+        onMergeLayerDown={handleMergeLayerDownRequest}
         onLayerOpacityChange={(layerId, opacity) =>
           commitStoreAction(() => setLayerOpacity(layerId, opacity))
         }
@@ -277,13 +313,27 @@ export const Editor = (): JSX.Element => {
         exporting={exporting}
         selectedScale={selectedScale}
         confirmOpen={dialogKind !== undefined}
-        confirmTitle={dialogKind === "preset" ? "载入预设模板" : "删除图层"}
+        confirmTitle={
+          dialogKind === "preset"
+            ? "载入预设模板"
+            : dialogKind === "merge"
+            ? "合并图层"
+            : "删除图层"
+        }
         confirmDescription={
           dialogKind === "preset"
             ? "载入模板会替换当前画布内容。继续操作前请确认当前作品已保存。"
+            : dialogKind === "merge"
+            ? `合并后「${layers.find((l) => l.id === pendingMergeSourceId)?.name ?? ""}」的笔画会合并到「${layers.find((l) => l.id === pendingMergeTargetId)?.name ?? ""}」，并删除源图层。`
             : "删除后该图层的笔画会从当前编辑状态移除。"
         }
-        confirmLabel={dialogKind === "preset" ? "载入模板" : "删除图层"}
+        confirmLabel={
+          dialogKind === "preset"
+            ? "载入模板"
+            : dialogKind === "merge"
+            ? "合并图层"
+            : "删除图层"
+        }
         onPresetSelect={handlePresetSelect}
         onPresetClose={() => setPresetOpen(false)}
         onScaleChange={setSelectedScale}

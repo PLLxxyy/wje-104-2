@@ -14,8 +14,10 @@ interface LayerState {
   addLayer: (name?: string) => void;
   deleteLayer: (layerId: string) => boolean;
   toggleLayerVisibility: (layerId: string) => void;
+  toggleLayerLock: (layerId: string) => void;
   setLayerOpacity: (layerId: string, opacity: number) => void;
   moveLayer: (layerId: string, direction: "up" | "down") => void;
+  mergeLayers: (sourceLayerId: string, targetLayerId: string) => boolean;
   addStrokeToActiveLayer: (stroke: Stroke) => void;
 }
 
@@ -25,6 +27,7 @@ const createEmptyLayer = (name: string): Layer => ({
   id: uuidv4(),
   name,
   visible: true,
+  locked: false,
   opacity: 1,
   strokes: []
 });
@@ -71,6 +74,12 @@ export const useLayerStore = create<LayerState>((set, get) => ({
         layer.id === layerId ? { ...layer, visible: !layer.visible } : layer
       )
     })),
+  toggleLayerLock: (layerId: string): void =>
+    set((state) => ({
+      layers: state.layers.map((layer) =>
+        layer.id === layerId ? { ...layer, locked: !layer.locked } : layer
+      )
+    })),
   setLayerOpacity: (layerId: string, opacity: number): void =>
     set((state) => ({
       layers: state.layers.map((layer) =>
@@ -87,6 +96,36 @@ export const useLayerStore = create<LayerState>((set, get) => ({
     const [layer] = layers.splice(index, 1);
     layers.splice(targetIndex, 0, layer);
     set({ layers });
+  },
+  mergeLayers: (sourceLayerId: string, targetLayerId: string): boolean => {
+    const layers = get().layers;
+    if (sourceLayerId === targetLayerId) {
+      return false;
+    }
+    const sourceLayer = layers.find((layer) => layer.id === sourceLayerId);
+    const targetLayer = layers.find((layer) => layer.id === targetLayerId);
+    if (!sourceLayer || !targetLayer) {
+      return false;
+    }
+    if (targetLayer.locked) {
+      return false;
+    }
+    const nextLayers = layers
+      .map((layer) => {
+        if (layer.id === targetLayerId) {
+          return {
+            ...layer,
+            strokes: [...layer.strokes, ...sourceLayer.strokes]
+          };
+        }
+        return layer;
+      })
+      .filter((layer) => layer.id !== sourceLayerId);
+    set({
+      layers: nextLayers,
+      activeLayerId: get().activeLayerId === sourceLayerId ? targetLayerId : get().activeLayerId
+    });
+    return true;
   },
   addStrokeToActiveLayer: (stroke: Stroke): void =>
     set((state) => ({

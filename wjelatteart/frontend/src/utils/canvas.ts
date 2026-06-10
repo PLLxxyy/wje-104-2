@@ -26,6 +26,7 @@ export const cloneLayer = (layer: Layer, regenerateId = false): Layer => ({
   id: regenerateId ? uuidv4() : layer.id,
   name: layer.name,
   visible: layer.visible,
+  locked: layer.locked,
   opacity: layer.opacity,
   strokes: layer.strokes.map((stroke) => cloneStroke(stroke, regenerateId))
 });

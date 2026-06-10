@@ -59,5 +59,9 @@ export const UI_TEXT = {
   saveSuccess: "作品已保存到本地。",
   loadTemplateSuccess: "预设模板已载入。",
   deleteLayerBlocked: "至少需要保留一个图层。",
-  canvasFailed: "画布渲染失败，请刷新页面后重试。"
+  canvasFailed: "画布渲染失败，请刷新页面后重试。",
+  layerLockedBlocked: "当前图层已锁定，无法绘制。请先解锁图层。",
+  mergeBlockedNoTarget: "没有可合并的下方图层。",
+  mergeBlockedTargetLocked: "目标图层已锁定，无法合并。请先解锁目标图层。",
+  mergeSuccess: "图层已合并。"
 } as const;
